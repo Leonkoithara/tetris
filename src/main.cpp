@@ -1,4 +1,3 @@
-#include "SDL_render.h"
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -18,6 +17,7 @@ std::vector<std::pair<int, int>> shape_positions;
 std::vector<SDL_Rect> falling_shape;
 
 void process_events();
+void process_keystoke(unsigned int key, unsigned int mod);
 std::vector<SDL_Rect> get_random_shape();
 void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape,
                          int x, int y);
@@ -47,16 +47,14 @@ int main()
     float height = DM.h;
     
     auto old_time = std::chrono::high_resolution_clock::now();
-    int block_speed = 1; // falls 1 block every 1 second
+    int block_speed = 500; // falls 1 block every 500 milliseconds
 
-    falling_shape = get_random_shape();
-    shapes.push_back(falling_shape);
-    shape_positions.push_back(std::pair<int, int>(0, 0));
+    spawn_new();
 
     while (running)
 	{
         auto new_time = std::chrono::high_resolution_clock::now();
-        auto diff = std::chrono::duration_cast<std::chrono::seconds>(new_time - old_time);
+        auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(new_time - old_time);
         if (diff.count() >= block_speed)
         {
             update_falling_blocks();
@@ -96,6 +94,9 @@ void process_events()
 
     switch (event.type)
 	{
+        case SDL_KEYDOWN:
+            process_keystoke(event.key.keysym.sym, event.key.keysym.mod);
+            break;
         case SDL_QUIT:
             running = false;
             break;
@@ -104,41 +105,130 @@ void process_events()
     }
 }
 
+void process_keystoke(unsigned int key, unsigned int mod)
+{
+    int max_x = 0, min_x = 10;
+    for (SDL_Rect block : falling_shape)
+    {
+        if (max_x < block.x+block.w)
+            max_x = block.x+block.w;
+        if (min_x > block.x)
+            min_x = block.x;
+    }
+    switch (key)
+	{
+        case 'w':
+            break;
+        case 'a':
+            if (shape_positions.back().first+min_x > 0)
+                shape_positions.back().first--;
+            break;
+        case 's':
+            break;
+        case 'd':
+            if (shape_positions.back().first+max_x < 10)
+                shape_positions.back().first++;
+            break;
+        default:
+            std::cout << "Unknown" << std::endl;
+            break;
+    }
+}
+
 std::vector<SDL_Rect> get_random_shape()
 {
+    static int i = -1;
+    i++;
     std::vector<std::vector<SDL_Rect>> blocks = {
         {
-            { 0, 0, 1, 4 }
+            { 0, 0, 4, 1 }        // I Block
         },
         {
             { 0, 0, 1, 1 },
-            { 0, 1, 3, 1 }
+            { 0, 1, 1, 1 },
+            { 0, 2, 1, 1 },
+            { 0, 3, 1, 1 }
         },
         {
-            { 2, 0, 1, 1 },
+            { 0, 0, 1, 1 },       // L Block
             { 0, 1, 3, 1 }
         },
         {
             { 0, 0, 2, 1 },
-            { 0, 1, 2, 1 }
+            { 0, 1, 1, 1 },
+            { 0, 2, 1, 1 }
         },
         {
-            { 1, 0, 2, 1 },
-            { 0, 1, 2, 1 }
+            { 0, 0, 3, 1 },
+            { 2, 1, 1, 1 }
         },
         {
             { 1, 0, 1, 1 },
+            { 1, 1, 1, 1 },
+            { 1, 2, 2, 1 }
+        },
+        {
+            { 2, 0, 1, 1 },       // J Block
             { 0, 1, 3, 1 }
         },
         {
+            { 0, 0, 1, 1 },
+            { 0, 1, 1, 1 },
+            { 0, 2, 2, 1 }
+        },
+        {
+            { 0, 0, 3, 1 },
+            { 0, 1, 1, 1 }
+        },
+        {
             { 0, 0, 2, 1 },
+            { 1, 1, 1, 1 },
+            { 1, 2, 1, 1 }
+        },
+        {
+            { 0, 0, 2, 1 },       // O Block
+            { 0, 1, 2, 1 }
+        },
+        {
+            { 1, 0, 2, 1 },       // S Block
+            { 0, 1, 2, 1 }
+        },
+        {
+            { 0, 0, 1, 1 },
+            { 0, 1, 2, 1 }
+        },
+        {
+            { 1, 0, 1, 1 },       // T block
+            { 0, 1, 3, 1 }
+        },
+        {
+            { 0, 0, 1, 1 },
+            { 0, 1, 2, 1 },
+            { 0, 2, 1, 1 }
+        },
+        {
+            { 0, 0, 3, 1 },
+            { 1, 1, 1, 1 }
+        },
+        {
+            { 1, 0, 1, 1 },
+            { 0, 1, 2, 1 },
+            { 1, 2, 1, 1 }
+        },
+        {
+            { 0, 0, 2, 1 },       // Z Block
             { 1, 1, 2, 1 }
+        },
+        {
+            { 1, 0, 1, 1 },
+            { 0, 1, 2, 1 },
+            { 0, 2, 1, 1 }
         }
     };
 
     int rand_num = rand()%7;
 
-    return blocks[rand_num];
+    return blocks[i];
 }
 
 void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape, int x, int y)
@@ -157,20 +247,31 @@ void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape, in
 
 void update_falling_blocks()
 {
-    int xb = falling_shape.back().x + shape_positions.back().first;
-    int wb = falling_shape.back().w;
-    int yb = falling_shape.back().y + shape_positions.back().second;
-    std::cout << xb << " " << wb << " " << yb << std::endl;;
-    for (int i=0; i<shape_positions.size(); i++)
+    for (SDL_Rect falling_blocks : falling_shape)
 	{
-        int x = shapes[i].front().x + shape_positions[i].first;
-        int w = shapes[i].front().w;
-        int y = shapes[i].front().y + shape_positions[i].second;
-        if ((y == yb+1 && (xb <= x+w && xb+wb >= x)) || yb == 19)
-		{
-            std::cout << x << " " << w << " " << y << std::endl;
+        int xb = shape_positions.back().first+falling_blocks.x;
+        int yb = shape_positions.back().second+falling_blocks.y;
+        int wb = falling_blocks.w;
+        if (yb == 19)
+        {
             falling = false;
             break;
+        }
+        for (int i=0; i<shapes.size()-1; i++)
+		{
+            std::vector<SDL_Rect> shape = shapes[i];
+            for (SDL_Rect block : shape)
+			{
+                int xt = shape_positions[i].first+block.x;
+                int yt = shape_positions[i].second+block.y;
+                int wt = block.w;
+
+                if (yt == yb+1 && (xb < xt+wt && xb+wb > xt))
+				{
+                    falling = false;
+                    break;
+                }
+            }
         }
     }
     if (falling)
@@ -184,5 +285,5 @@ void spawn_new()
     falling = true;
     falling_shape = get_random_shape();
     shapes.push_back(falling_shape);
-    shape_positions.push_back(std::pair<int, int>(0, 0));
+    shape_positions.push_back(std::pair<int, int>(3, 0));
 }
