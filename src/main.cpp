@@ -235,7 +235,35 @@ int get_random_shape()
 
 void rotate(bool direction)
 {
-    
+    std::vector<int> shape_indices = { 0, 2, 6, 10, 11, 13, 17, 19 };
+    std::vector<int> max_shape_orientations = { 2, 4, 4, 1, 2, 4, 2 };
+
+    int current_shape;
+    for (int i=0; i<shape_indices.size(); i++)
+	{
+        if (falling_shape_index < shape_indices[i])
+        {
+            current_shape = i-1;
+            int max_orientations = max_shape_orientations[current_shape];
+            if (direction)
+			{
+                if (falling_shape_index+1 < shape_indices[current_shape+1])
+                    falling_shape_index++;
+                else
+                    falling_shape_index = shape_indices[current_shape];
+            }
+            else
+            {
+                if (falling_shape_index-1 >= shape_indices[current_shape])
+                    falling_shape_index--;
+                else
+                    falling_shape_index = shape_indices[current_shape+1]-1;
+            }
+            shapes.pop_back();
+            shapes.push_back(spawn_blocks[falling_shape_index]);
+            break;
+        }
+    }
 }
 
 void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape, int x, int y)
