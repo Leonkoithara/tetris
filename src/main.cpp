@@ -9,18 +9,106 @@
 bool running;
 bool falling = true;
 int block_size = 48;
+int falling_shape_index;
+int rotation = 0;
 int score = 0;
 int screen_x = 480;
 int screen_y = 960;
 std::vector<std::vector<SDL_Rect>> shapes;
 std::vector<std::pair<int, int>> shape_positions;
-std::vector<SDL_Rect> falling_shape;
+std::vector<std::vector<SDL_Rect>> spawn_blocks = {
+    {
+        { 0, 0, 4, 1 }        // I Block
+    },
+    {
+        { 0, 0, 1, 1 },
+        { 0, 1, 1, 1 },
+        { 0, 2, 1, 1 },
+        { 0, 3, 1, 1 }
+    },
+    {
+        { 0, 0, 1, 1 },       // L Block
+        { 0, 1, 3, 1 }
+    },
+    {
+        { 0, 0, 2, 1 },
+        { 0, 1, 1, 1 },
+        { 0, 2, 1, 1 }
+    },
+    {
+        { 0, 0, 3, 1 },
+        { 2, 1, 1, 1 }
+    },
+    {
+        { 1, 0, 1, 1 },
+        { 1, 1, 1, 1 },
+        { 1, 2, 2, 1 }
+    },
+    {
+        { 2, 0, 1, 1 },       // J Block
+        { 0, 1, 3, 1 }
+    },
+    {
+        { 0, 0, 1, 1 },
+        { 0, 1, 1, 1 },
+        { 0, 2, 2, 1 }
+    },
+    {
+        { 0, 0, 3, 1 },
+        { 0, 1, 1, 1 }
+    },
+    {
+        { 0, 0, 2, 1 },
+        { 1, 1, 1, 1 },
+        { 1, 2, 1, 1 }
+    },
+    {
+        { 0, 0, 2, 1 },       // O Block
+        { 0, 1, 2, 1 }
+    },
+    {
+        { 1, 0, 2, 1 },       // S Block
+        { 0, 1, 2, 1 }
+    },
+    {
+        { 0, 0, 1, 1 },
+        { 0, 1, 2, 1 }
+    },
+    {
+        { 1, 0, 1, 1 },       // T block
+        { 0, 1, 3, 1 }
+    },
+    {
+        { 0, 0, 1, 1 },
+        { 0, 1, 2, 1 },
+        { 0, 2, 1, 1 }
+    },
+    {
+        { 0, 0, 3, 1 },
+        { 1, 1, 1, 1 }
+    },
+    {
+        { 1, 0, 1, 1 },
+        { 0, 1, 2, 1 },
+        { 1, 2, 1, 1 }
+    },
+    {
+        { 0, 0, 2, 1 },       // Z Block
+        { 1, 1, 2, 1 }
+    },
+    {
+        { 1, 0, 1, 1 },
+        { 0, 1, 2, 1 },
+        { 0, 2, 1, 1 }
+    }
+};
 
 void process_events();
 void process_keystoke(unsigned int key, unsigned int mod);
-std::vector<SDL_Rect> get_random_shape();
+int get_random_shape();
 void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape,
                          int x, int y);
+void rotate(bool direction);
 void update_falling_blocks();
 void spawn_new();
 
@@ -108,6 +196,7 @@ void process_events()
 void process_keystoke(unsigned int key, unsigned int mod)
 {
     int max_x = 0, min_x = 10;
+    std::vector<SDL_Rect> falling_shape = spawn_blocks[falling_shape_index];
     for (SDL_Rect block : falling_shape)
     {
         if (max_x < block.x+block.w)
@@ -118,12 +207,14 @@ void process_keystoke(unsigned int key, unsigned int mod)
     switch (key)
 	{
         case 'w':
+            rotate(true);
             break;
         case 'a':
             if (shape_positions.back().first+min_x > 0)
                 shape_positions.back().first--;
             break;
         case 's':
+            rotate(false);
             break;
         case 'd':
             if (shape_positions.back().first+max_x < 10)
@@ -135,100 +226,44 @@ void process_keystoke(unsigned int key, unsigned int mod)
     }
 }
 
-std::vector<SDL_Rect> get_random_shape()
+int get_random_shape()
 {
-    static int i = -1;
-    i++;
-    std::vector<std::vector<SDL_Rect>> blocks = {
-        {
-            { 0, 0, 4, 1 }        // I Block
-        },
-        {
-            { 0, 0, 1, 1 },
-            { 0, 1, 1, 1 },
-            { 0, 2, 1, 1 },
-            { 0, 3, 1, 1 }
-        },
-        {
-            { 0, 0, 1, 1 },       // L Block
-            { 0, 1, 3, 1 }
-        },
-        {
-            { 0, 0, 2, 1 },
-            { 0, 1, 1, 1 },
-            { 0, 2, 1, 1 }
-        },
-        {
-            { 0, 0, 3, 1 },
-            { 2, 1, 1, 1 }
-        },
-        {
-            { 1, 0, 1, 1 },
-            { 1, 1, 1, 1 },
-            { 1, 2, 2, 1 }
-        },
-        {
-            { 2, 0, 1, 1 },       // J Block
-            { 0, 1, 3, 1 }
-        },
-        {
-            { 0, 0, 1, 1 },
-            { 0, 1, 1, 1 },
-            { 0, 2, 2, 1 }
-        },
-        {
-            { 0, 0, 3, 1 },
-            { 0, 1, 1, 1 }
-        },
-        {
-            { 0, 0, 2, 1 },
-            { 1, 1, 1, 1 },
-            { 1, 2, 1, 1 }
-        },
-        {
-            { 0, 0, 2, 1 },       // O Block
-            { 0, 1, 2, 1 }
-        },
-        {
-            { 1, 0, 2, 1 },       // S Block
-            { 0, 1, 2, 1 }
-        },
-        {
-            { 0, 0, 1, 1 },
-            { 0, 1, 2, 1 }
-        },
-        {
-            { 1, 0, 1, 1 },       // T block
-            { 0, 1, 3, 1 }
-        },
-        {
-            { 0, 0, 1, 1 },
-            { 0, 1, 2, 1 },
-            { 0, 2, 1, 1 }
-        },
-        {
-            { 0, 0, 3, 1 },
-            { 1, 1, 1, 1 }
-        },
-        {
-            { 1, 0, 1, 1 },
-            { 0, 1, 2, 1 },
-            { 1, 2, 1, 1 }
-        },
-        {
-            { 0, 0, 2, 1 },       // Z Block
-            { 1, 1, 2, 1 }
-        },
-        {
-            { 1, 0, 1, 1 },
-            { 0, 1, 2, 1 },
-            { 0, 2, 1, 1 }
-        }
-    };
-
     int rand_num = rand()%7;
 
-    return blocks[i];
+    return rand_num;
+}
+
+void rotate(bool direction)
+{
+    std::vector<int> shape_indices = { 0, 2, 6, 10, 11, 13, 17, 19 };
+    std::vector<int> max_shape_orientations = { 2, 4, 4, 1, 2, 4, 2 };
+
+    int current_shape;
+    for (int i=0; i<shape_indices.size(); i++)
+	{
+        if (falling_shape_index < shape_indices[i])
+        {
+            current_shape = i-1;
+            int max_orientations = max_shape_orientations[current_shape];
+            if (direction)
+			{
+                if (falling_shape_index+1 < shape_indices[current_shape+1])
+                    falling_shape_index++;
+                else
+                    falling_shape_index = shape_indices[current_shape];
+            }
+            else
+            {
+                if (falling_shape_index-1 >= shape_indices[current_shape])
+                    falling_shape_index--;
+                else
+                    falling_shape_index = shape_indices[current_shape+1]-1;
+            }
+            shapes.pop_back();
+            shapes.push_back(spawn_blocks[falling_shape_index]);
+            break;
+        }
+    }
 }
 
 void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape, int x, int y)
@@ -247,6 +282,7 @@ void render_shape_at_pos(SDL_Renderer *renderer, std::vector<SDL_Rect> shape, in
 
 void update_falling_blocks()
 {
+    std::vector<SDL_Rect> falling_shape = spawn_blocks[falling_shape_index];
     for (SDL_Rect falling_blocks : falling_shape)
 	{
         int xb = shape_positions.back().first+falling_blocks.x;
@@ -283,7 +319,7 @@ void update_falling_blocks()
 void spawn_new()
 {
     falling = true;
-    falling_shape = get_random_shape();
-    shapes.push_back(falling_shape);
+    falling_shape_index = get_random_shape();
+    shapes.push_back(spawn_blocks[falling_shape_index]);
     shape_positions.push_back(std::pair<int, int>(3, 0));
 }
