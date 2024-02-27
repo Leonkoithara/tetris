@@ -11,10 +11,10 @@ bool running;
 bool falling = true;
 int block_size = 48;
 int falling_shape_index;
-int rotation = 0;
 int score = 0;
 int screen_x = 480;
 int screen_y = 960;
+int filled_blocks[20];
 std::vector<std::vector<SDL_Rect>> shapes;
 std::vector<std::pair<int, int>> shape_positions;
 std::vector<std::vector<SDL_Rect>> spawn_blocks = {
@@ -138,9 +138,12 @@ int main()
     float height = DM.h;
     
     auto old_time = std::chrono::high_resolution_clock::now();
-    int block_speed = 500; // falls 1 block every 500 milliseconds
+    int block_speed = 250; // falls 1 block every 500 milliseconds
 
-    spawn_new();
+    falling = true;
+    falling_shape_index = get_random_shape();
+    shapes.push_back(spawn_blocks[falling_shape_index]);
+    shape_positions.push_back(std::pair<int, int>(3, 0));
 
     while (running)
 	{
@@ -272,8 +275,11 @@ void move(bool direction)
 int get_random_shape()
 {
     int rand_num = rand()%7;
+    std::vector<int> shape_indices = { 0, 2, 6, 10, 11, 13, 17, 19 };
+    std::vector<int> max_shape_orientations = { 2, 4, 4, 1, 2, 4, 2 };
+    int orientation = rand()%max_shape_orientations[rand_num];
 
-    return rand_num;
+    return shape_indices[rand_num]+orientation;
 }
 
 void rotate(bool direction)
@@ -429,6 +435,49 @@ void update_falling_blocks()
 
 void spawn_new()
 {
+    if (shape_positions.back().second <= 0)
+	{
+        std::cout << "Game Over! You scored: " << score << std::endl;
+        running = false;
+        return;
+    }
+
+    std::vector<SDL_Rect> falling_shape = spawn_blocks[falling_shape_index];
+    for (SDL_Rect falling_blocks : falling_shape)
+	{
+        int xb = shape_positions.back().first+falling_blocks.x;
+        int yb = shape_positions.back().second+falling_blocks.y;
+        int wb = falling_blocks.w;
+        filled_blocks[yb] += wb;
+        if (filled_blocks[yb] == 10)
+		{
+            score += 10;
+            for (int i=0; i<shapes.size(); i++)
+            {
+                if (shape_positions[i].second+shapes[i].back().y == yb)
+				{
+                    if (shapes[i].size() == 1)
+					{
+                        shapes.erase(shapes.begin()+i);
+                        shape_positions.erase(shape_positions.begin()+i);
+                        i--;
+                    }
+                    else
+                    {
+                        shapes[i].pop_back();
+                        shape_positions[i].second++;
+                    }
+                }
+                else if (shape_positions[i].second+shapes[i].back().y < yb)
+				{
+                    shape_positions[i].second++;
+                }
+            }
+            for (int i=yb; i>0; i--)
+                filled_blocks[i] = filled_blocks[i-1];
+            filled_blocks[0] = 0;
+        }
+    }
     falling = true;
     falling_shape_index = get_random_shape();
     shapes.push_back(spawn_blocks[falling_shape_index]);
