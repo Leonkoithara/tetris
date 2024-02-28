@@ -1,4 +1,3 @@
-#include "SDL_render.h"
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -10,6 +9,7 @@
 bool running;
 bool falling = true;
 int block_size = 48;
+int block_speed = 250;
 int falling_shape_index;
 int score = 0;
 int screen_x = 480;
@@ -73,7 +73,8 @@ std::vector<std::vector<SDL_Rect>> spawn_blocks = {
     },
     {
         { 0, 0, 1, 1 },
-        { 0, 1, 2, 1 }
+        { 0, 1, 2, 1 },
+        { 1, 2, 1, 1 }
     },
     {
         { 1, 0, 1, 1 },       // T block
@@ -118,6 +119,8 @@ void spawn_new();
 int main()
 {
     running = true;
+    srand(time(NULL));
+
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
     {
         std::cout << "SDL Initialization failed" << std::endl;
@@ -138,7 +141,6 @@ int main()
     float height = DM.h;
     
     auto old_time = std::chrono::high_resolution_clock::now();
-    int block_speed = 250; // falls 1 block every 500 milliseconds
 
     falling = true;
     falling_shape_index = get_random_shape();
@@ -449,32 +451,64 @@ void spawn_new()
         int yb = shape_positions.back().second+falling_blocks.y;
         int wb = falling_blocks.w;
         filled_blocks[yb] += wb;
-        if (filled_blocks[yb] == 10)
+    }
+    for (int i=19; i>0; i--)
+	{
+        if (filled_blocks[i] == 10)
 		{
             score += 10;
-            for (int i=0; i<shapes.size(); i++)
-            {
-                if (shape_positions[i].second+shapes[i].back().y == yb)
+            block_speed -= 10;
+            for (int j=0; j<shapes.size(); j++)
+			{
+                std::vector<SDL_Rect> shape = shapes[j];
+                for (int k=shape.size()-1; k>=0; k--)
 				{
-                    if (shapes[i].size() == 1)
+                    if (shape_positions[j].second+shape[k].y == i)
 					{
-                        shapes.erase(shapes.begin()+i);
-                        shape_positions.erase(shape_positions.begin()+i);
-                        i--;
+                        if (shape.size() == 1)
+						{
+                            shapes.erase(shapes.begin()+j);
+                            shape_positions.erase(shape_positions.begin()+j);
+                            j--;
+                        }
+                        else
+                        {
+                            shapes[j].erase(shapes[j].begin()+k);
+                        }
                     }
-                    else
-                    {
-                        shapes[i].pop_back();
-                        shape_positions[i].second++;
-                    }
-                }
-                else if (shape_positions[i].second+shapes[i].back().y < yb)
-				{
-                    shape_positions[i].second++;
                 }
             }
-            for (int i=yb; i>0; i--)
-                filled_blocks[i] = filled_blocks[i-1];
+        }
+    }
+    std::vector<std::vector<SDL_Rect>> tmp = shapes;
+    for (int i=19; i>0; i--)
+	{
+        if (filled_blocks[i] == 10)
+		{
+            for (int j=0; j<shapes.size(); j++)
+			{
+                std::vector<SDL_Rect> shape = shapes[j];
+                for (int k=shape.size()-1; k>=0; k--)
+				{
+                    if (shape_positions[j].second+shape[k].y < i)
+                        tmp[j][k].y++;
+                }
+            }
+        }
+    }
+    for (int i=0; i<shapes.size(); i++)
+	{
+        for (int j=0; j<shapes[i].size(); j++)
+		{
+            shapes[i][j] = tmp[i][j];
+        }
+    }
+    for (int i=19; i>0; i--)
+	{
+        if (filled_blocks[i] == 10)
+		{
+            for (int l=i; l>0; l--)
+                filled_blocks[l] = filled_blocks[l-1];
             filled_blocks[0] = 0;
         }
     }
